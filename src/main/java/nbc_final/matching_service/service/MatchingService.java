@@ -1,13 +1,15 @@
 package nbc_final.matching_service.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nbc_final.gathering.domain.matching.dto.request.MatchingRequestDto;
-import nbc_final.gathering.domain.matching.dto.response.MatchingResponseDto;
+import nbc_final.matching_service.dto.MatchingRequestDto;
+import nbc_final.matching_service.dto.MatchingFailed;
+import nbc_final.matching_service.dto.MatchingSuccess;
 import nbc_final.matching_service.entity.Matching;
 import nbc_final.matching_service.enums.MatchingStatus;
 import nbc_final.matching_service.repository.MatchingRepository;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -21,12 +23,14 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Transactional
 public class MatchingService {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final RabbitTemplate rabbitTemplate;
     private final MatchingRepository matchingRepository;
     public final Deque<MatchingRequestDto> matchingList = new ConcurrentLinkedDeque<>(); // 매칭 원하는 유저들 정보가 존재하는 매칭 대기 큐
     public final Map<Long, Integer> matchingFailedMap = new ConcurrentHashMap<>(); // 해당 유저가 매칭에 몇 번째 실패했는지 기록하는 맵
+    private int count;
 
     // 매칭 조건 : 유저간의 관심사와 지역이 같으면 매칭
     @Scheduled(fixedDelay = 10000, initialDelay = 1000) // 1초 후 10초마다 동작
@@ -69,14 +73,17 @@ public class MatchingService {
                     log.info("매칭에 3번째 실패하였으므로 ID {}인 유저의 매칭을 종료합니다. 잠시 후 다시 시도해주세요.", matchingUser1.getUserId());
                     System.out.println();
                     matchingFailedMap.remove(matchingUser1.getUserId()); // 해당 유저 실패 기록 초기화
-                    sendMatcingFailed(matchingUser1.getUserId());
-                    // 매칭 실패 알림 전송
+                    MatchingFailed matchingFailed = new MatchingFailed(matchingUser1.getUserId());
+                    sendMatchingFailed(matchingFailed); // 매칭 실패 알림 전송
+
+
                 } else {
                     matchingList.offerFirst(matchingUser1); // 아직 실패 횟수 3회 미만이면 다시 매칭 대기열 맨 앞에 삽입
                 }
             } else { // 매칭 성공
                 MatchingRequestDto matchingUser2 = otherMatchingUser.get();
                 matchingList.remove(matchingUser2); // 다른 유저와 매칭 성공했으므로 매칭 대기열에서 유저 삭제
+                log.info("매칭 성공 횟수: {}", count++);
 
                 // 매칭 엔티티 생성
                 Matching matching = Matching.createMatching(
@@ -90,14 +97,13 @@ public class MatchingService {
                 log.info("관심사 {}, 거주 지역 {}인 유저 ID {}와 유저 ID {}간의 매칭이 성립되었습니다.", matchingUser1.getInterestType(), matchingUser1.getLocation(), matchingUser1.getUserId(), matchingUser2.getUserId());
                 System.out.println();
                 matchingRepository.save(matching); // 매칭 DB에 저장
-                MatchingResponseDto matchingResponseDto = new MatchingResponseDto(
+                MatchingSuccess matchingResponseDto = new MatchingSuccess(
+                        String.valueOf(matching.getId()),
                         matching.getUserId1(),
-                        matchingUser2.getUserId(),
-                        MatchingStatus.SUCCESS
+                        matchingUser2.getUserId()
                 );
 
-//                MatchingResponseDto matchingResponseDto = MatchingResponseDto.of(matching); // DTO 변환
-                sendMatcingSucess(matchingResponseDto); // 두 유저들에게 매칭 성공 알림 발송(미구현)
+                sendMatcingSucess(matchingResponseDto); // 채팅으로 유저 ID 전송
             }
         }
     }
@@ -134,17 +140,16 @@ public class MatchingService {
         }
     }
 
-    // 매칭 성공 알림
-    private void sendMatcingSucess(MatchingResponseDto matchingResponseDto) {
-
-        log.info("ID {} 유저와 ID {} 유저간 매칭 성공", matchingResponseDto.getUserId1(), matchingResponseDto.getUserId2());
-        kafkaTemplate.send("matching-to-notification", matchingResponseDto);
+    // 매칭 성공 전송
+    private void sendMatcingSucess(MatchingSuccess matchingSuccess) {
+        log.info("ID {} 유저와 ID {} 유저간 매칭 성공", matchingSuccess.getUserId1(), matchingSuccess.getUserId2());
+        rabbitTemplate.convertAndSend("matching.exchange", "matching.success", matchingSuccess);
     }
 
-    // 매칭 실패 알림
-    private void sendMatcingFailed(Long userId) {
-        log.info("ID {} 유저 매칭 실패", userId);
-        kafkaTemplate.send("matching-to-notification", userId);
+    // 매칭 실패 전송
+    private void sendMatchingFailed(MatchingFailed matchingFailed) {
+        log.info("ID {} 유저 매칭 실패", matchingFailed.getFailedUserId());
+        rabbitTemplate.convertAndSend("matching.exchange", "matching.failed", matchingFailed);
     }
 
     // 매칭 가능 여부
