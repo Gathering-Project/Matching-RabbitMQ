@@ -30,6 +30,7 @@ public class MatchingService {
     private final MatchingRepository matchingRepository;
     public final Deque<MatchingRequestDto> matchingList = new ConcurrentLinkedDeque<>(); // 매칭 원하는 유저들 정보가 존재하는 매칭 대기 큐
     public final Map<Long, Integer> matchingFailedMap = new ConcurrentHashMap<>(); // 해당 유저가 매칭에 몇 번째 실패했는지 기록하는 맵
+    private int count;
 
     // 매칭 조건 : 유저간의 관심사와 지역이 같으면 매칭
     @Scheduled(fixedDelay = 10000, initialDelay = 1000) // 1초 후 10초마다 동작
@@ -82,6 +83,7 @@ public class MatchingService {
             } else { // 매칭 성공
                 MatchingRequestDto matchingUser2 = otherMatchingUser.get();
                 matchingList.remove(matchingUser2); // 다른 유저와 매칭 성공했으므로 매칭 대기열에서 유저 삭제
+                log.info("매칭 성공 횟수: {}", count++);
 
                 // 매칭 엔티티 생성
                 Matching matching = Matching.createMatching(
