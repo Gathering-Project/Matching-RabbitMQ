@@ -1,51 +1,13 @@
-#spring:
-#  kafka:
-#    bootstrap-servers: localhost:9092 # Kafka ??? ??
-#    consumer:
-#      group-id: your-consumer-group-id # ??? ?? ID ??
-#      auto-offset-reset: earliest # ??? ??? ?? (latest, earliest ?)
-#      enable-auto-commit: true # ?? ?? ??
-#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-#      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-#    producer:
-#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-#      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-#    template:
-#      default-topic: your-default-topic # ?? ?? ?? ?? (??)
-
-#spring:
-#  kafka:
-#    bootstrap-servers: kafka1:9092 # Docker Compose? Kafka ???? ?????? ??
-#    consumer:
-#      group-id: "matching-group"
-#      auto-offset-reset: "earliest"
-#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-#      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-#    producer:
-#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-#      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-
 server:
   port:
     6060
 
 spring:
-  #  kafka:
-  #    bootstrap-servers: "localhost:19092,localhost:19093,localhost:19094"
-  kafka:
-    bootstrap-servers: "kafka1:9092,kafka2:9093,kafka3:9094"
-
-
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-    consumer:
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      auto-offset-reset: latest
-      properties:
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
-      group-id: "matching_group"
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
   jpa:
     hibernate:
