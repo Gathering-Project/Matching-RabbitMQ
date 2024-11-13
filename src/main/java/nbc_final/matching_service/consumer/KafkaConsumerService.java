@@ -2,7 +2,7 @@
 //
 //import lombok.RequiredArgsConstructor;
 //import lombok.extern.slf4j.Slf4j;
-//import nbc_final.gathering.domain.matching.dto.request.MatchingRequestDto;
+//import nbc_final.matching_service.dto.MatchingRequestDto;
 //import nbc_final.matching_service.service.MatchingService;
 //import org.apache.kafka.clients.consumer.ConsumerRecord;
 //import org.springframework.kafka.annotation.KafkaListener;

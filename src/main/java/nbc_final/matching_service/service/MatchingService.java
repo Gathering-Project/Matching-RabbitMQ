@@ -3,15 +3,13 @@ package nbc_final.matching_service.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nbc_final.gathering.domain.matching.dto.request.MatchingRequestDto;
-import nbc_final.gathering.domain.matching.dto.response.MatchingFailed;
-import nbc_final.gathering.domain.matching.dto.response.MatchingSuccess;
+import nbc_final.matching_service.dto.MatchingRequestDto;
+import nbc_final.matching_service.dto.MatchingFailed;
+import nbc_final.matching_service.dto.MatchingSuccess;
 import nbc_final.matching_service.entity.Matching;
 import nbc_final.matching_service.enums.MatchingStatus;
-import nbc_final.matching_service.producer.MatchingProducer;
 import nbc_final.matching_service.repository.MatchingRepository;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -76,6 +74,7 @@ public class MatchingService {
                     matchingFailedMap.remove(matchingUser1.getUserId()); // 해당 유저 실패 기록 초기화
                     MatchingFailed matchingFailed = new MatchingFailed(matchingUser1.getUserId());
                     sendMatchingFailed(matchingFailed); // 매칭 실패 알림 전송
+
 
                 } else {
                     matchingList.offerFirst(matchingUser1); // 아직 실패 횟수 3회 미만이면 다시 매칭 대기열 맨 앞에 삽입
@@ -142,14 +141,13 @@ public class MatchingService {
     // 매칭 성공 전송
     private void sendMatcingSucess(MatchingSuccess matchingSuccess) {
         log.info("ID {} 유저와 ID {} 유저간 매칭 성공", matchingSuccess.getUserId1(), matchingSuccess.getUserId2());
-        rabbitTemplate.convertAndSend("matching.exchange", "chatting.message.routingKey", matchingSuccess);
-
+        rabbitTemplate.convertAndSend("matching.exchange", "matching.success", matchingSuccess);
     }
 
     // 매칭 실패 전송
     private void sendMatchingFailed(MatchingFailed matchingFailed) {
         log.info("ID {} 유저 매칭 실패", matchingFailed.getFailedUserId());
-        rabbitTemplate.convertAndSend("matching.exchange", "chatting.message.routingKey", matchingFailed);
+        rabbitTemplate.convertAndSend("matching.exchange", "matching.failed", matchingFailed);
     }
 
     // 매칭 가능 여부
