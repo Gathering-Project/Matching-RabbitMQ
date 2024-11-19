@@ -7,7 +7,7 @@ env:
   AWS_REGION: ap-northeast-2                 # AWS 리전
   ECR_REPOSITORY: ottermeet               # ECR 저장소 이름
   EC2_HOST: "43.200.54.163"              # EC2 퍼블릭 IP
-  EC2_USER: "wemeetnowmatching"                        # EC2 사용자 이름(인스턴스 이름)
+  EC2_USER: "ubuntu"                        # EC2 사용자 이름
   APP_DIR: "~/app"                            # 애플리케이션 파일 저장 경로
   IMAGE_TAG: ${{ github.sha }}                # 이미지 태그 (커밋 해시 사용)
 permissions:
@@ -64,4 +64,27 @@ jobs:
           chmod 700 ~/.ssh
           chmod 600 ~/.ssh/authorized_keys
           # Docker 및 AWS CLI 설치 확인
+          if ! command -v docker &> /dev/null; then
+            echo "Docker가 설치되어 있지 않습니다. 설치를 진행합니다."
+            sudo yum update -y
+            sudo yum install -y docker
+            sudo service docker start
+            sudo usermod -aG docker $(whoami)
+          fi
+          if ! command -v aws &> /dev/null; then
+            echo "AWS CLI가 설치되어 있지 않습니다. 설치를 진행합니다."
+            curl "https://awscli.amazonaws.com/aws-cli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+          fi
+          # Docker 로그인
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+          # 기존 컨테이너 종료 및 삭제
+          docker ps -q | grep -q . && docker stop \$(docker ps -q) && docker rm \$(docker ps -aq) || true
+          # 최신 이미지 Pull
+          docker pull ${{ steps.build-image.outputs.image }}
+          # 이미지 실행
+          docker run -d -p 8080:8080 ${{ steps.build-image.outputs.image }}
+          echo "배포 완료: 이미지를 EC2에서 실행 중입니다."
+        EOF
           
