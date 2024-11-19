@@ -78,7 +78,7 @@ jobs:
             echo "AWS CLI가 설치되어 있지 않습니다. 설치를 진행합니다."
             sudo apt update -y
             sudo apt install -y unzip curl
-            curl -o "awscliv2.zip" "https://awscli.amazonaws.com/aws-cli-exe-linux-aarch64.zip"
+            curl -O 'https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip'
             
             # ZIP 파일 검증
             if ! unzip -t awscliv2.zip &> /dev/null; then
