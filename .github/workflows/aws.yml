@@ -19,6 +19,9 @@ jobs:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     steps:
+      - name: Print IMAGE_TAG
+        run: echo ${{ env.IMAGE_TAG }}
+    
       - name: Checkout code
         uses: actions/checkout@v4
 
