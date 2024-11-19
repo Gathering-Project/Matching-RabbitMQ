@@ -33,6 +33,11 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Check if build/libs exists
+        run: |
+          echo "Checking if build/libs exists"
+          ls -al build/libs
+
       # 4. Docker 이미지 빌드 및 ECR에 푸시
       - name: Build Docker image
         run: |
