@@ -4,7 +4,7 @@ on:
     branches: [ "main" ]
     
 env:
-  AWS_REGION: ap-northeast-1                 # AWS 리전
+  AWS_REGION: ap-northeast-2                 # AWS 리전
   ECR_REPOSITORY: ottermeet               # ECR 저장소 이름
   EC2_HOST: "43.200.54.163"              # EC2 퍼블릭 IP
   EC2_USER: "wemeetnowmatching"                        # EC2 사용자 이름(인스턴스 이름)
