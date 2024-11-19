@@ -28,21 +28,21 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           
-      - name: Build project with Gradle
+      - name: Build project with Gradle // 빌드
         run: ./gradlew clean bootJar
         
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials // aws 설정
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.CLOUD_AWS_S3_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.CLOUD_AWS_S3_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: Login to Amazon ECR // ECR 로그인
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
         
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build, tag, and push image to Amazon ECR // 빌드, 이미지 Push
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}  # 로그인 단계의 출력값을 참조
@@ -57,10 +57,11 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
 
-      - name: Deploy to EC2
+      - name: Deploy to EC2 // EC2 배포
         run: |
-          # EC2에서 Docker 실행
-          ssh -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << EOF
+            # EC2에서 Docker 실행
+            ssh -o StrictHostKeyChecking=no ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << EOF
+            
             # Docker 로그인
             aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             
@@ -72,4 +73,4 @@ jobs:
             
             # 컨테이너 실행
             docker run -d --name wemeetnow_container -p 8080:8080 ${{ steps.build-image.outputs.image }}
-          EOF
+            EOF
