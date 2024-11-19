@@ -21,7 +21,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # 2. AWS CLI 인증
+      # 2. Gradle 빌드 (필요한 경우)
+      - name: Build project using Gradle
+        run: ./gradlew build
+
+      # 3. AWS CLI 인증
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -29,27 +33,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.CLOUD_AWS_S3_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3. Docker 로그인 (ECR)
+      # 4. Docker 로그인 (ECR)
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Check if build/libs exists
+      # 5. Docker 이미지 빌드 및 ECR에 푸시
+      - name: Build, tag, and push Docker image
         run: |
-          echo "Checking if build/libs exists"
-          ls -al build/libs
-
-      # 4. Docker 이미지 빌드 및 ECR에 푸시
-      - name: Build Docker image
-        run: |
-          echo "현재 디렉토리:"
-          pwd
-          echo "디렉토리 내용:"
-          ls -al
           docker build -t ${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
           docker tag ${{ env.ECR_REPOSITORY }}:$IMAGE_TAG ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
 
-      # 5. EC2에 SSH로 접속하여 Docker 컨테이너 실행
+      # 6. EC2에 배포
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.0
         with:
@@ -58,11 +53,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}  # 비공개 키를 GitHub Secrets에 저장
           port: 22
           script: |
-            # EC2에서 Docker 이미지 풀
             docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
-            # 기존 컨테이너 중지 및 삭제
             docker ps -q | xargs docker stop
             docker ps -a -q | xargs docker rm
-            # 새 컨테이너 실행
             docker run -d -p 8080:8080 ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
             echo "배포 완료!"
