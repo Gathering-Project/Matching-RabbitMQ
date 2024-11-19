@@ -1,4 +1,4 @@
-name: Deploy to EC2 with ECR_v01
+name: Deploy to EC2 with ECR_v02
 on:
   push:
     branches: [ "main" ]
