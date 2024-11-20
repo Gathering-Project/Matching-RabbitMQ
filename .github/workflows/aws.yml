@@ -48,7 +48,7 @@ jobs:
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
       run: |
         # Docker 이미지 빌드 및 ECR 푸시 (amd64 아키텍처 지정)
-        docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_OUTPUT
     
