@@ -78,7 +78,7 @@ public class RabbitMqConfig {
         return new Jackson2JsonMessageConverter(objectMapper);
     }
 
-    }
+}
 
 
 
