@@ -4,7 +4,7 @@ server:
 
 spring:
   rabbitmq:
-    host: localhost
+    host: 43.200.54.163
     port: 5672
     username: admin
     password: 1234
@@ -18,23 +18,23 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/matching?serverTimezone=Asia/Seoul
+    url: jdbc:mysql://database-2.chmy408yifq6.ap-northeast-2.rds.amazonaws.com:3306/matching?serverTimezone=Asia/Seoul
     #    url: jdbc:mysql://mysql_container:3306/matching?serverTimezone=Asia/Seoul
     #    username: ${MYSQL_NAME}
     #    password: ${MYSQL_PASSWORD}
     username: root
-    password: 1234
+    password: 12345678
 
   data:
     redis:
       sentinel:
         master:
-          host: localhost
+          host: 43.200.54.163
           port: 6379
         nodes:
-          - localhost:26379
-          - localhost:26380
-          - localhost:26381
+          - 43.200.54.163:26379
+          - 43.200.54.163:26380
+          - 43.200.54.163:26381
       timeout: 10000
 
 
