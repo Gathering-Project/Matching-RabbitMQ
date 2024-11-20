@@ -10,6 +10,8 @@ import nbc_final.matching_service.entity.Matching;
 import nbc_final.matching_service.enums.MatchingStatus;
 import nbc_final.matching_service.repository.MatchingRepository;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @Transactional
 public class MatchingService {
 
+    private final RedisTemplate<String, String> redisTemplate;
     private final RabbitTemplate rabbitTemplate;
     private final MatchingRepository matchingRepository;
     public final Deque<MatchingRequestDto> matchingList = new ConcurrentLinkedDeque<>(); // 매칭 원하는 유저들 정보가 존재하는 매칭 대기 큐
@@ -33,6 +36,7 @@ public class MatchingService {
     private int count;
 
     // 매칭 조건 : 유저간의 관심사와 지역이 같으면 매칭
+    @Async
     @Scheduled(fixedDelay = 10000, initialDelay = 1000) // 1초 후 10초마다 동작
     public void matching() {
 
@@ -47,6 +51,7 @@ public class MatchingService {
 
             StringBuilder userIds = new StringBuilder("유저 ID: "); // 현재 대기열의 유저 확인
 
+            // 매칭 대기열에 존재하는 유저들 로그 확인
             matchingList.stream()
                     .filter(user -> user != null)
                     .forEach(user -> userIds.append(user.getUserId()).append(", "));
@@ -58,6 +63,13 @@ public class MatchingService {
             log.info("매칭 대기 유저 ID 목록: {}", userIds.toString()); // 현재 대기열의 유저 로깅
 
             MatchingRequestDto matchingUser1 = matchingList.poll(); // 가장 먼저 신청한 유저 매칭 시도
+
+//             매칭 시도 중인 유저가 로그아웃, 브라우저 종료, 인터넷 연결 해제 등으로 웹소켓 연결 중이 맞는지 확인
+            if (!isUserConnected(matchingUser1.getUserId())) {
+                log.info("ID {} 유저는 이미 연결이 해제되었습니다", matchingUser1.getUserId());
+                continue; // 다음 매칭 진행
+            }
+
             Optional<MatchingRequestDto> otherMatchingUser = matchingList.stream()
                     .filter(waitingUser -> isPossibleMatching(matchingUser1, waitingUser)) // 관심사, 지역이 같은 유저 있는지 필터링
                     .findFirst();
@@ -76,12 +88,15 @@ public class MatchingService {
                     MatchingFailed matchingFailed = new MatchingFailed(matchingUser1.getUserId());
                     sendMatchingFailed(matchingFailed); // 매칭 실패 알림 전송
 
-
                 } else {
                     matchingList.offerFirst(matchingUser1); // 아직 실패 횟수 3회 미만이면 다시 매칭 대기열 맨 앞에 삽입
                 }
             } else { // 매칭 성공
                 MatchingRequestDto matchingUser2 = otherMatchingUser.get();
+                if (!isUserConnected(matchingUser2.getUserId())) {
+                    log.info("ID {} 유저는 이미 연결이 해제되었습니다", matchingUser1.getUserId());
+                    matchingList.offerFirst(matchingUser1);
+                }
                 matchingList.remove(matchingUser2); // 다른 유저와 매칭 성공했으므로 매칭 대기열에서 유저 삭제
                 log.info("매칭 성공 횟수: {}", count++);
 
@@ -102,10 +117,10 @@ public class MatchingService {
                         matching.getUserId1(),
                         matchingUser2.getUserId()
                 );
-
                 sendMatcingSucess(matchingResponseDto); // 채팅으로 유저 ID 전송
             }
         }
+
     }
 
     // 매칭 취소 메서드
@@ -150,6 +165,12 @@ public class MatchingService {
     private void sendMatchingFailed(MatchingFailed matchingFailed) {
         log.info("ID {} 유저 매칭 실패", matchingFailed.getFailedUserId());
         rabbitTemplate.convertAndSend("matching.exchange", "matching.failed", matchingFailed);
+    }
+
+    // Redis 웹소켓 연결 세선으로 유저가 현재 연결 상태가 맞는지 확인하는 메서드 추가
+    private boolean isUserConnected(Long userId) {
+        String key = "websocket:userId:" + userId;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
     // 매칭 가능 여부

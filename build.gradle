@@ -49,6 +49,12 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+    // 헬스체크
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // 프로메테우스
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
 }
 
 tasks.named('test') {
