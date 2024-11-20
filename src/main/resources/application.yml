@@ -4,10 +4,10 @@ server:
 
 spring:
   rabbitmq:
-    host: 43.200.54.163
+    host: ${RABBITMQ_HOST_IP}
     port: 5672
-    username: admin
-    password: 1234
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
 
   jpa:
     hibernate:
@@ -18,23 +18,20 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://database-2.chmy408yifq6.ap-northeast-2.rds.amazonaws.com:3306/matching?serverTimezone=Asia/Seoul
-    #    url: jdbc:mysql://mysql_container:3306/matching?serverTimezone=Asia/Seoul
-    #    username: ${MYSQL_NAME}
-    #    password: ${MYSQL_PASSWORD}
-    username: root
-    password: 12345678
+    url: ${RABBITMQ_URL}
+    username: ${RABBITMQ_AWS_MYSQL_USERNAME}
+    password: ${RABBITMQ_AWS_MYSQL_PASSWORD}
 
   data:
     redis:
       sentinel:
         master:
-          host: 43.200.54.163
+          host: ${REDIS_HOST_IP}
           port: 6379
         nodes:
-          - 43.200.54.163:26379
-          - 43.200.54.163:26380
-          - 43.200.54.163:26381
+          - ${REDIS_HOST_IP}:26379
+          - ${REDIS_HOST_IP}:26380
+          - ${REDIS_HOST_IP}:26381
       timeout: 10000
 
 
